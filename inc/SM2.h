@@ -15,12 +15,14 @@ class SM2 {
 public:
 	static uint32_t TgtStep;
 	static uint32_t CurStep;
+	static uint32_t GearStep;
 	static uint32_t TgtAcc;
 	static uint16_t MaxSpeed;
 	static SM_DIR_Typedef CurDIR;
 	static bool SpeedAcc;
 	static bool NoStep;
-	static bool FullStep;
+	static bool FullSpeed;
+	static bool GearSpeed;
 	static bool Busy;
 	static uint8_t ForwardLimit;
 	static uint8_t BackwardLimit;

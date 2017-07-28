@@ -84,7 +84,7 @@ void OE4::NVICInit() {
 }
 
 extern "C" void TIM4_IRQHandler(void) {
-	if (TIM_OE->CNT <= 1024) {
+	if (TIM_OE->CNT <= 0x7fff) {
 		++OE4::ExCNT;
 	} else {
 		--OE4::ExCNT;

@@ -26,19 +26,21 @@
 
 uint32_t SM2::TgtStep = 10000;
 uint32_t SM2::CurStep = 0;
+uint32_t SM2::GearStep = 0;
 uint32_t SM2::TgtAcc = 200000;
 uint16_t SM2::MaxSpeed = 20000;
 SM_DIR_Typedef SM2::CurDIR = SM_DIR_Forward;
 bool SM2::SpeedAcc = true;
 bool SM2::NoStep = false;
-bool SM2::FullStep = false;
+bool SM2::FullSpeed = false;
+bool SM2::GearSpeed = false;
 bool SM2::Busy = false;
 uint8_t SM2::ForwardLimit = 0x04;
 uint8_t SM2::BackwardLimit = 0x08;
 
 void SM2::Init() {
-	TIMInit();
 	GPIOInit();
+	TIMInit();
 	NVICInit();
 }
 
@@ -67,14 +69,23 @@ void SM2::Move(uint32_t step, SM_DIR_Typedef dir) {
 	//设置方向
 	SetDir(dir);
 
+	GearSpeed = false;
 	NoStep = false;
 	CurStep = 0;
 	TgtStep = step;
 	Busy = true;
 
 	if (SpeedAcc) {
-		FullStep = false;
-
+		FullSpeed = false;
+		//计算减速区间
+		uint32_t airStep = ((uint64_t) MaxSpeed * (uint64_t) MaxSpeed / TgtAcc)
+				>> 1;
+		if ((TgtStep >> 1) > airStep) {
+			//大于两倍空中时间，完整的加减速曲线
+			GearStep = airStep;
+		} else {
+			GearStep = TgtStep >> 1;
+		}
 		//设置加速度定时器当前速度为200
 		TIM_ACC->CNT = 200;
 
@@ -86,7 +97,7 @@ void SM2::Move(uint32_t step, SM_DIR_Typedef dir) {
 		TIM_Cmd(TIM_ACC, ENABLE);
 		TIM_Cmd(TIM_PUL, ENABLE);
 	} else {
-		FullStep = true;
+		FullSpeed = true;
 
 		//设置速度；不加速
 		TIM_ACC->CNT = MaxSpeed;
@@ -123,14 +134,14 @@ void SM2::Run(SM_DIR_Typedef dir) {
 
 	EN_RESET
 	;
-	//设置方向
+//设置方向
 	SetDir(dir);
 
 	NoStep = true;
 	Busy = true;
 
 	if (SpeedAcc) {
-		FullStep = false;
+		FullSpeed = false;
 
 		//设置加速度定时器当前速度为200
 		TIM_ACC->CNT = 200;
@@ -143,7 +154,7 @@ void SM2::Run(SM_DIR_Typedef dir) {
 		TIM_Cmd(TIM_ACC, ENABLE);
 		TIM_Cmd(TIM_PUL, ENABLE);
 	} else {
-		FullStep = true;
+		FullSpeed = true;
 
 		//设置速度；不加速
 		TIM_ACC->CNT = MaxSpeed;
@@ -161,6 +172,8 @@ void SM2::Run(SM_DIR_Typedef dir) {
 void SM2::Stop() {
 	TIM_Cmd(TIM_ACC, DISABLE);
 	TIM_Cmd(TIM_PUL, DISABLE);
+	FullSpeed = false;
+	GearSpeed = false;
 	Busy = false;
 }
 
@@ -207,6 +220,8 @@ void SM2::GPIOInit() {
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_SetBits(GPIOA, EN_PIN);
+	GPIO_ResetBits(GPIOA, PUL_PIN);
 }
 
 void SM2::TIMInit() {
@@ -223,7 +238,7 @@ void SM2::TIMInit() {
 	TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM_ACC, &TIM_TimeBaseInitStructure);
 
-	//初始化脉冲发生定时器
+//初始化脉冲发生定时器
 	TIM_DeInit(TIM_PUL);
 	TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
 	TIM_TimeBaseInitStructure.TIM_Prescaler = 7;  //8分频 最低速度为 138
@@ -234,11 +249,11 @@ void SM2::TIMInit() {
 
 	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM1; //PWM模式1
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable; //使能
-	TIM_OCInitStructure.TIM_OutputNState = TIM_OutputState_Disable; //关闭互补输出
+	TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable; //关闭互补输出
 	TIM_OCInitStructure.TIM_Pulse = MaxSpeed / TIM_ACC->CNT >> 1; //脉冲宽度
-	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_High; //高电平有效
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low; //高电平有效
 	TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low; //低电平有效
-	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset; //低电平
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set; //低电平
 	TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset; //低电平
 	TIM_OC1Init(TIM_PUL, &TIM_OCInitStructure); //初始化
 }
@@ -248,13 +263,13 @@ void SM2::NVICInit() {
 
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_ACC_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
 	NVIC_Init(&NVIC_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_PUL_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 2;
+	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
 	NVIC_Init(&NVIC_InitStructure);
 
@@ -274,25 +289,48 @@ void TIM6_IRQHandler(void) {
 
 void TIM5_IRQHandler(void) {
 	SM2::CurStep++;
-	if ((SM2::CurStep < SM2::TgtStep) || SM2::NoStep) { //预定步数未到，继续累加
-		if (SM2::FullStep == false) {
-			if (TIM_ACC->CNT == SM2::MaxSpeed) {
-				SM2::FullStep = true;
+//预定步数未到，继续累加
+	if ((SM2::CurStep < SM2::TgtStep) || SM2::NoStep) {
+		//有加减速
+		if (SM2::SpeedAcc) {
+			if (SM2::TgtStep - SM2::CurStep > SM2::GearStep) {
+				//未到达减速区间
+				if (SM2::FullSpeed == false) {
+					if (TIM_ACC->CNT == SM2::MaxSpeed) {
+						SM2::FullSpeed = true;
+						TIM_PUL->ARR = SystemCoreClock / SM2::MaxSpeed >> 3;
+						TIM_PUL->CCR1 = TIM_PUL->ARR >> 1;
+					} else {
+						TIM_PUL->ARR = SystemCoreClock / TIM_ACC->CNT >> 3;
+						TIM_PUL->CCR1 = TIM_PUL->ARR >> 1;
+					}
+				}
 			} else {
-				TIM_PUL->ARR = SystemCoreClock / TIM_ACC->CNT >> 3;
-				TIM_PUL->CCR1 = TIM_PUL->ARR >> 1;
+				//到达减速区间
+				if (SM2::GearSpeed == false) {
+					//开始进行减速计算
+					TIM_Cmd(TIM_ACC, DISABLE);
+					TIM_ACC->CNT = SM2::MaxSpeed - TIM_ACC->CNT;
+					TIM_Cmd(TIM_ACC, ENABLE);
+					SM2::GearSpeed = true;
+				} else {
+					//根据减速计算速度
+					uint16_t speed = TIM_ACC->ARR - TIM_ACC->CNT;
+					//限制最小速度
+					speed = speed < 200 ? 200 : speed;
+					TIM_PUL->ARR = SystemCoreClock / speed >> 3;
+					TIM_PUL->CCR1 = TIM_PUL->ARR >> 1;
+				}
 			}
-		} else {
-			TIM_PUL->ARR = SystemCoreClock / SM2::MaxSpeed >> 3;
-			TIM_PUL->CCR1 = TIM_PUL->ARR >> 1;
 		}
 	} else {
 		TIM_PUL->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN)); //到达指定步数，停止输出脉冲
 		TIM_ACC->CR1 &= (uint16_t) (~((uint16_t) TIM_CR1_CEN)); //到达指定步数，停止计算加速度
-		SM2::FullStep = false;
+		SM2::FullSpeed = false;
+		SM2::GearSpeed = false;
 		SM2::Busy = false;
 	}
-	TIM_ClearITPendingBit(TIM_PUL, TIM_IT_Update);
+	TIM_PUL->SR = (uint16_t) ~TIM_IT_Update;
 }
 
 }
