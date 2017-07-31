@@ -54,6 +54,7 @@ void ExADC::RefreshData() {
 	//等待转换结束
 	while (BUSY_READ != 0)
 		;
+	__disable_irq();
 
 	SCLK_SET;
 	__NOP();
@@ -86,6 +87,7 @@ void ExADC::RefreshData() {
 		}
 	}
 	CS_SET;
+	__enable_irq();
 }
 
 void ExADC::GPIOInit() {

@@ -25,6 +25,8 @@
 #define EN_SET GPIO_SetBits(GPIOC, EN_PIN);
 #define EN_RESET GPIO_ResetBits(GPIOC, EN_PIN);
 
+#define STARTSPEED 200
+
 uint32_t SM1::TgtStep = 10000;
 uint32_t SM1::CurStep = 0;
 uint32_t SM1::GearStep = 0;
@@ -80,8 +82,8 @@ void SM1::Move(uint32_t step, SM_DIR_Typedef dir) {
 	if (SpeedAcc) {
 		FullSpeed = false;
 		//计算减速区间
-		uint32_t airStep = ((uint64_t) MaxSpeed * (uint64_t) MaxSpeed / TgtAcc)
-				>> 1;
+		uint32_t airStep = ((uint64_t) (MaxSpeed - STARTSPEED)
+				* (uint64_t) MaxSpeed / TgtAcc) >> 1;
 		if ((TgtStep >> 1) > airStep) {
 			//大于两倍空中时间，完整的加减速曲线
 			GearStep = airStep;
@@ -89,7 +91,7 @@ void SM1::Move(uint32_t step, SM_DIR_Typedef dir) {
 			GearStep = TgtStep >> 1;
 		}
 		//设置加速度定时器当前速度为200
-		TIM_ACC->CNT = 200;
+		TIM_ACC->CNT = STARTSPEED;
 
 		//开始计算初始速度
 		TIM_PUL->ARR = SystemCoreClock / TIM_ACC->CNT >> 3; //默认八分频
@@ -146,7 +148,7 @@ void SM1::Run(SM_DIR_Typedef dir) {
 		FullSpeed = false;
 
 		//设置加速度定时器当前速度为200
-		TIM_ACC->CNT = 200;
+		TIM_ACC->CNT = STARTSPEED;
 
 		//开始计算初始速度
 		TIM_PUL->ARR = SystemCoreClock / TIM_ACC->CNT >> 3; //默认八分频

@@ -15,6 +15,7 @@
 #include "OE2.h"
 #include "OE4.h"
 
+#include "U_ADC1.h"
 #include "ExADC.h"
 #include "U_DAC.h"
 
@@ -312,7 +313,7 @@ void Function::Inquire_ADC(uint8_t no) {
 	data.word = 0;
 	switch (no) {
 	case 0:
-
+		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, U_ADC1::Data.byte);
 		break;
 	case 1:
 		Protocol::Send(Salve_AC, PC_Inquire_ADC);
