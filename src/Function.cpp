@@ -29,8 +29,9 @@
 TwoWordtoByteSigned_Typedef Function::ASBSWAAE_Pos[512];
 WordtoByteSigned_Typedef Function::ASBSWAAE_ADC[512];
 
-PIDParam_Typedef Function::PIDParam = { 0, 0, 0, 0, 0, 0, -2047, 2047 };
-PIDClass Function::PID = PIDClass(&PIDParam, PIDMode_Post);
+PIDParam_Typedef Function::PIDParam = { 0, 0, 0 };
+PIDClass Function::PID = PIDClass(0, 0, 0, 0.001, PIDDir_Negtive, &PIDParam,
+		PIDMode_Diff);
 bool Function::PIDEnable = false;
 
 void Function::Enter(P_Buf_Typedef* p_buf) {
@@ -399,14 +400,14 @@ void Function::Control_SM(uint8_t no, uint8_t status) {
 		if (status == 0xff) {
 			SM1::Stop();
 		} else {
-			SM1::Run(status != 0 ? SM_DIR_Forward : SM_DIR_Backward);
+			SM1::Run(status != 0 ? SM_DIR_Upward : SM_DIR_Backward);
 		}
 		break;
 	case 2:
 		if (status == 0xff) {
 			SM2::Stop();
 		} else {
-			SM2::Run(status != 0 ? SM_DIR_Forward : SM_DIR_Backward);
+			SM2::Run(status != 0 ? SM_DIR_Upward : SM_DIR_Backward);
 		}
 		break;
 	default:
@@ -430,7 +431,7 @@ void Function::Control_DAC(uint8_t no, uint16_t data) {
 void Function::AutoControl_SM_By_Step(uint8_t no, int32_t step) {
 	SM_DIR_Typedef dir;
 	if (step > 0) {
-		dir = SM_DIR_Forward;
+		dir = SM_DIR_Upward;
 	} else {
 		dir = SM_DIR_Backward;
 		step = -step;
@@ -449,7 +450,7 @@ void Function::AutoControl_SM_By_Step(uint8_t no, int32_t step) {
 
 void Function::AutoControl_SM_By_Limit(uint8_t no, uint8_t status,
 		uint8_t limitNo) {
-	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Forward : SM_DIR_Backward;
+	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Upward : SM_DIR_Backward;
 	switch (no) {
 	case 1:
 		SM1::Run(dir);
@@ -568,12 +569,12 @@ void Function::Setting_Encoder_Zero(uint8_t no) {
 
 void Function::Setting_Protect_Limit(uint8_t no, uint8_t status,
 		uint8_t limitNo) {
-	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Forward : SM_DIR_Backward;
+	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Upward : SM_DIR_Backward;
 	switch (no) {
 	case 1:
 		switch (dir) {
-		case SM_DIR_Forward:
-			SM1::ForwardLimit = 1 << limitNo;
+		case SM_DIR_Upward:
+			SM1::UpwardLimit = 1 << limitNo;
 			break;
 		case SM_DIR_Backward:
 			SM1::BackwardLimit = 1 << limitNo;
@@ -584,8 +585,8 @@ void Function::Setting_Protect_Limit(uint8_t no, uint8_t status,
 		break;
 	case 2:
 		switch (dir) {
-		case SM_DIR_Forward:
-			SM2::ForwardLimit = 1 << limitNo;
+		case SM_DIR_Upward:
+			SM2::UpwardLimit = 1 << limitNo;
 			break;
 		case SM_DIR_Backward:
 			SM2::BackwardLimit = 1 << limitNo;
@@ -604,10 +605,8 @@ void Function::Setting_PIDParam(uint8_t no, DoubletoByte_Typedef p,
 		DoubletoByte_Typedef set) {
 	switch (no) {
 	case 0:
-		PIDParam.kp = p.d;
-		PIDParam.ki = i.d;
-		PIDParam.kd = d.d;
-		PIDParam.set = set.d;
+		PID.SetTunings(p.d, i.d, d.d);
+		PIDParam.SetPoint = set.d;
 		PID.Clear();
 		break;
 	case 1: {
@@ -636,7 +635,7 @@ void Function::Setting_PIDParam(uint8_t no, DoubletoByte_Typedef p,
 void Function::Setting_PIDInput(uint8_t no, DoubletoByte_Typedef now) {
 	switch (no) {
 	case 0:
-		PIDParam.now = now.d;
+		PIDParam.Input = now.d;
 		break;
 	case 1:
 		break;

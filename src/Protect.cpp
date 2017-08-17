@@ -9,9 +9,9 @@
 
 void Protect::SM() {
 	if (SM1::Busy) {
-		switch (SM1::CurDIR) {
-		case SM_DIR_Forward:
-			if ((Limit::Data & SM1::ForwardLimit) != 0) {
+		switch (SM1::CurDir) {
+		case SM_DIR_Upward:
+			if ((Limit::Data & SM1::UpwardLimit) != 0) {
 				SM1::Stop();
 			}
 			break;
@@ -26,9 +26,9 @@ void Protect::SM() {
 	}
 
 	if (SM2::Busy) {
-		switch (SM2::CurDIR) {
-		case SM_DIR_Forward:
-			if ((Limit::Data & SM2::ForwardLimit) != 0) {
+		switch (SM2::CurDir) {
+		case SM_DIR_Upward:
+			if ((Limit::Data & SM2::UpwardLimit) != 0) {
 				SM2::Stop();
 			}
 			break;
