@@ -18,14 +18,15 @@ public:
 	static uint32_t GearStep;
 	static uint32_t TgtAcc;
 	static uint16_t MaxSpeed;
-	static SM_DIR_Typedef CurDIR;
+	static SM_DIR_Typedef CurDir;
 	static bool SpeedAcc;
 	static bool NoStep;
 	static bool FullSpeed;
 	static bool GearSpeed;
 	static bool Busy;
-	static uint8_t ForwardLimit;
+	static uint8_t UpwardLimit;
 	static uint8_t BackwardLimit;
+	static SM_DIR_Typedef DefaultDir;
 
 	static void Init();
 	static void Move(uint32_t step, SM_DIR_Typedef dir);

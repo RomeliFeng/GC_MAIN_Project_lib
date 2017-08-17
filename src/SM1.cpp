@@ -32,15 +32,16 @@ uint32_t SM1::CurStep = 0;
 uint32_t SM1::GearStep = 0;
 uint32_t SM1::TgtAcc = 200000;
 uint16_t SM1::MaxSpeed = 20000;
-SM_DIR_Typedef SM1::CurDIR = SM_DIR_Forward;
+SM_DIR_Typedef SM1::CurDir = SM_DIR_Upward;
 bool SM1::SpeedAcc = true;
 bool SM1::NoStep = false;
 bool SM1::FullSpeed = false;
 bool SM1::GearSpeed = false;
 bool SM1::Busy = false;
 
-uint8_t SM1::ForwardLimit = 0x01;
-uint8_t SM1::BackwardLimit = 0x02;
+uint8_t SM1::UpwardLimit = 0x04;
+uint8_t SM1::BackwardLimit = 0x01;
+SM_DIR_Typedef SM1::DefaultDir = SM_DIR_Upward;
 
 void SM1::Init() {
 	GPIOInit();
@@ -54,8 +55,8 @@ void SM1::Move(uint32_t step, SM_DIR_Typedef dir) {
 
 	Limit::RefreshData();
 	switch (dir) {
-	case SM_DIR_Forward:
-		if ((Limit::Data & ForwardLimit) != 0) {
+	case SM_DIR_Upward:
+		if ((Limit::Data & UpwardLimit) != 0) {
 			return;
 		}
 		break;
@@ -122,8 +123,8 @@ void SM1::Run(SM_DIR_Typedef dir) {
 
 	Limit::RefreshData();
 	switch (dir) {
-	case SM_DIR_Forward:
-		if ((Limit::Data & ForwardLimit) != 0) {
+	case SM_DIR_Upward:
+		if ((Limit::Data & UpwardLimit) != 0) {
 			return;
 		}
 		break;
@@ -201,8 +202,8 @@ void SM1::Unlock() {
 }
 
 void SM1::SetDir(SM_DIR_Typedef dir) {
-	CurDIR = dir;
-	if (dir == SM_DIR_Forward) {
+	CurDir = dir;
+	if (dir == DefaultDir) {
 		DIR_SET
 		;
 	} else {
@@ -225,7 +226,7 @@ void SM1::GPIOInit() {
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOC, &GPIO_InitStructure);
 
-	GPIO_SetBits(GPIOC, EN_PIN);
+	GPIO_ResetBits(GPIOC, EN_PIN);
 	GPIO_ResetBits(GPIOC, PUL_PIN);
 }
 

@@ -11,7 +11,7 @@
 #include "cmsis_device.h"
 
 typedef enum _SM_DIR_Typedef {
-	SM_DIR_Forward, SM_DIR_Backward
+	SM_DIR_Upward, SM_DIR_Backward
 } SM_DIR_Typedef;
 
 typedef enum _SM_Ch_Typedef {
