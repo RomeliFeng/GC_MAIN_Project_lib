@@ -49,6 +49,7 @@ uint32_t HC165Class::Read(uint8_t len) {
 		}
 		CP_RESET;
 		Delay();
+		Delay();
 	}
 	CE_SET;
 	Delay();
@@ -84,6 +85,15 @@ void HC165Class::GPIOInit() {
 }
 
 inline void HC165Class::Delay() {
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
+	__NOP();
 	__NOP();
 	__NOP();
 	__NOP();

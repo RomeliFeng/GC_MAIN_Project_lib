@@ -53,21 +53,21 @@ void HC595Class::GPIOInit() {
 
 void HC595Class::Write(uint32_t data, uint8_t len) {
 	STCP_RESET;	//����Ϊ�͵�ƽ �Ա���������ظ�������
-	Delay();
+//	Delay();
 	for (uint32_t mask = 1 << --len; mask != 0; mask >>= 1) {
 		SHCP_RESET; ////����Ϊ�͵�ƽ �Ա������������λ����  Qn>>Q(n+1)
-		Delay();
+//		Delay();
 		if ((mask & data) != 0) {
 			DS_SET;
 		} else {
 			DS_RESET;
 		}
-		Delay();
+//		Delay();
 		SHCP_SET;
 		Delay();
 	}
 	STCP_SET;
-	Delay();
+//	Delay();
 	Enable();
 }
 
