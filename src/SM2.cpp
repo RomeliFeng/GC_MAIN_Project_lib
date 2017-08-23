@@ -40,7 +40,7 @@ bool SM2::Busy = false;
 
 uint8_t SM2::UpwardLimit = 0x20;
 uint8_t SM2::BackwardLimit = 0x08;
-SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Upward;
+SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Backward;
 
 void SM2::Init() {
 	GPIOInit();
