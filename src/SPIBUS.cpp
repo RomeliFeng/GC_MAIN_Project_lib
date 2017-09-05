@@ -30,8 +30,8 @@ void SPIBUS::Select(Salve_Typedef salve, FunctionalState newState) {
 	}
 }
 
-bool SPIBUS::Ready() {
-	volatile uint16_t last = millis();
+bool SPIBUS::CheckReady() {
+	volatile uint32_t last = millis();
 	while (READ_READY != 0) {
 		if (millis() - last > READYTIMELIMIT) {
 			return false;

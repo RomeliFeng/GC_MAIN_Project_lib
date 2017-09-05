@@ -10,7 +10,7 @@
 
 #include "cmsis_device.h"
 
-#define READYTIMELIMIT 100
+#define READYTIMELIMIT 200
 
 typedef enum _Salve_Typedef {
 	Salve_FL = GPIO_Pin_6,
@@ -24,7 +24,7 @@ class SPIBUS {
 public:
 	static void Init();
 	static void Select(Salve_Typedef salve, FunctionalState newState);
-	static bool Ready();
+	static bool CheckReady();
 private:
 	static void GPIOInit();
 };

@@ -39,6 +39,8 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_Control_Motor = 0x22,
 	PC_Control_SM = 0x23,
 	PC_Control_DAC = 0x24,
+	PC_Control_ValveOpen = 0x25,
+	PC_Control_ValveClose = 0x26,
 
 	PC_AutoControl_Mask = 0x40,
 	PC_AutoControl_SM_By_Step = 0x41,
@@ -101,6 +103,7 @@ public:
 	static inline void Send(Salve_Typedef salve, PC_Typedef com) {
 		Send(salve, com, 0, (uint8_t*) 0x00);
 	}
+	static void Receive(Salve_Typedef salve, uint8_t len);
 };
 
 #endif /* PROTOCOL_H_ */

@@ -131,6 +131,22 @@ void Function::Control(P_Buf_Typedef* p_buf) {
 		Control_DAC(p_buf->data[0], data.word);
 	}
 		break;
+	case PC_Control_ValveOpen: {
+		TwoWordtoByte_Typedef tmp;
+		tmp.byte[0] = p_buf->data[0];
+		tmp.byte[1] = p_buf->data[1];
+		tmp.byte[2] = p_buf->data[2];
+		Control_ValveOpen(tmp.twoword);
+	}
+		break;
+	case PC_Control_ValveClose: {
+		TwoWordtoByte_Typedef tmp;
+		tmp.byte[0] = p_buf->data[0];
+		tmp.byte[1] = p_buf->data[1];
+		tmp.byte[2] = p_buf->data[2];
+		Control_ValveClose(tmp.twoword);
+	}
+		break;
 	default:
 		break;
 	}
@@ -318,8 +334,8 @@ void Function::Inquire_ADC(uint8_t no) {
 		break;
 	case 1:
 		Protocol::Send(Salve_AC, PC_Inquire_ADC);
-		if (SPIBUS::Ready()) {
-
+		if (SPIBUS::CheckReady()) {
+			Protocol::Receive(Salve_AC, 2);
 		}
 		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, data.byte);
 		break;
@@ -426,6 +442,14 @@ void Function::Control_DAC(uint8_t no, uint16_t data) {
 	default:
 		break;
 	}
+}
+
+void Function::Control_ValveOpen(uint32_t status) {
+	PowerDev::ValveOpen(status);
+}
+
+void Function::Control_ValveClose(uint32_t status) {
+	PowerDev::ValveClose(status);
 }
 
 void Function::AutoControl_SM_By_Step(uint8_t no, int32_t step) {
@@ -670,9 +694,6 @@ void Function::Setting_Address(uint8_t add) {
 }
 #pragma GCC diagnostic pop
 
-void Function::Special_Mask() {
-}
-
 void Function::Special_Reset() {
 	NVIC_SystemReset();
 }
@@ -685,3 +706,4 @@ void Function::Special_Continue() {
 
 void Function::Special_Cacel() {
 }
+

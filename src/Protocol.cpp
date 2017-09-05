@@ -126,3 +126,10 @@ void Protocol::Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
 	U_SPI2::SendSync(sendbuf.data, sendbuf.len);
 	SPIBUS::Select(salve, DISABLE);
 }
+
+void Protocol::Receive(Salve_Typedef salve, uint8_t len) {
+	DataBuf_Typedef sendbuf;
+	SPIBUS::Select(salve, ENABLE);
+	U_SPI2::ReceiveSync(sendbuf.data, 1 + 2 + 1 + len + 1);
+	SPIBUS::Select(salve, DISABLE);
+}

@@ -46,6 +46,8 @@ public:
 	static void Control_Motor(int16_t speed);
 	static void Control_SM(uint8_t no, uint8_t status);
 	static void Control_DAC(uint8_t no, uint16_t data);
+	static void Control_ValveOpen(uint32_t status);
+	static void Control_ValveClose(uint32_t status);
 
 	static void AutoControl_SM_By_Step(uint8_t no, int32_t step);
 	static void AutoControl_SM_By_Limit(uint8_t no, uint8_t status,
@@ -67,7 +69,6 @@ public:
 	static void Setting_USART(uint8_t com);
 	static void Setting_Address(uint8_t add);
 
-	static void Special_Mask();
 	static void Special_Reset();
 	static void Special_Stop();
 	static void Special_Continue();
