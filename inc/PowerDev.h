@@ -42,11 +42,12 @@ typedef enum _ValveCh_Typedef {
 class PowerDev {
 public:
 	volatile static uint32_t Status;
-	static bool Busy;
 
 	static void Init();
 	static void RefreshData();
 	static void Valve(uint32_t status);
+	static void ValveOpen(uint32_t status);
+	static void ValveClose(uint32_t status);
 	static void Motor(int16_t speed);
 private:
 	static void GPIOInit();

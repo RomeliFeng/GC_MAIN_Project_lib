@@ -14,13 +14,16 @@ HC595Class HC595PowerDev = HC595Class(GPIOE, GPIO_Pin_11, GPIO_Pin_14,
 GPIO_Pin_12, GPIO_Pin_13);
 
 volatile uint32_t PowerDev::Status = 0x00000000;
-bool PowerDev::Busy;
 
 void PowerDev::Init() {
+	__disable_irq();
+
 	HC595PowerDev.Init();
 	HC595PowerDev.Write(Status, 24);
 	GPIOInit();
 	TIMInit();
+
+	__enable_irq();
 }
 
 void PowerDev::RefreshData() {
@@ -28,15 +31,36 @@ void PowerDev::RefreshData() {
 }
 
 void PowerDev::Valve(uint32_t status) {
-	Busy = true;
+	__disable_irq();
+
 	Status &= MotorMask;
 	Status = (status & ValveCh_Mask);
 	RefreshData();
-	Busy = false;
+
+	__enable_irq();
+}
+
+void PowerDev::ValveOpen(uint32_t status) {
+	__disable_irq();
+
+	Status |= (status & ValveCh_Mask);
+	RefreshData();
+
+	__enable_irq();
+}
+
+void PowerDev::ValveClose(uint32_t status) {
+	__disable_irq();
+
+	Status &= ~(status & ValveCh_Mask);
+	RefreshData();
+
+	__enable_irq();
 }
 
 void PowerDev::Motor(int16_t speed) {
-	Busy = true;
+	__disable_irq();
+
 	if (speed > 0) {
 		Status |= MotorMask;
 	} else {
@@ -45,7 +69,8 @@ void PowerDev::Motor(int16_t speed) {
 	}
 	TIM3->CCR4 = speed;
 	RefreshData();
-	Busy = false;
+
+	__enable_irq();
 }
 
 void PowerDev::GPIOInit() {
