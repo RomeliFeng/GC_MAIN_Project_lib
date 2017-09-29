@@ -38,9 +38,14 @@ bool SM2::FullSpeed = false;
 bool SM2::GearSpeed = false;
 bool SM2::Busy = false;
 
-uint8_t SM2::UpwardLimit = 0x20;
+//摩擦试验机
+//uint8_t SM2::UpwardLimit = 0x20;
+//uint8_t SM2::BackwardLimit = 0x08;
+//SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Backward;
+
+uint8_t SM2::UpwardLimit = 0x04;
 uint8_t SM2::BackwardLimit = 0x08;
-SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Backward;
+SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Upward;
 
 void SM2::Init() {
 	GPIOInit();
@@ -258,7 +263,7 @@ void SM2::TIMInit() {
 	TIM_OCInitStructure.TIM_Pulse = MaxSpeed / TIM_ACC->CNT >> 1; //脉冲宽度
 	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low; //高电平有效
 	TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low; //低电平有效
-	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set; //低电平
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset; //低电平
 	TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset; //低电平
 	TIM_OC1Init(TIM_PUL, &TIM_OCInitStructure); //初始化
 }
@@ -293,12 +298,14 @@ void TIM6_IRQHandler(void) {
 }
 
 void TIM5_IRQHandler(void) {
+	TIM_PUL->SR = (uint16_t) ~TIM_IT_Update;
 	SM2::CurStep++;
 //预定步数未到，继续累加
 	if ((SM2::CurStep < SM2::TgtStep) || SM2::NoStep) {
 		//有加减速
 		if (SM2::SpeedAcc) {
-			if (SM2::TgtStep - SM2::CurStep > SM2::GearStep) {
+			if (((SM2::TgtStep - SM2::CurStep) > SM2::GearStep)
+					|| SM2::NoStep) {
 				//未到达减速区间
 				if (SM2::FullSpeed == false) {
 					if (TIM_ACC->CNT == SM2::MaxSpeed) {
@@ -335,7 +342,6 @@ void TIM5_IRQHandler(void) {
 		SM2::GearSpeed = false;
 		SM2::Busy = false;
 	}
-	TIM_PUL->SR = (uint16_t) ~TIM_IT_Update;
 }
 
 }

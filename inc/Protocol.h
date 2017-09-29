@@ -15,7 +15,10 @@
 #include "U_SPI2.h"
 
 typedef enum _PA_Typedef { //Protocol Analysis
-	PA_Ok, PA_AddError, PA_CheckSumError, PA_FrameError
+	PA_Ok = 0x00,
+	PA_AddError = 0x01,
+	PA_CheckSumError = 0x02,
+	PA_FrameError = 0x03
 } PA_Typedef;
 
 typedef enum _PC_Typedef { //Protocol Command
@@ -31,7 +34,10 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_Inquire_Tigger = 0x07,
 	PC_Inquire_Motor = 0x08,
 	PC_Inquire_Special = 0x09,
-	PC_Inquire_DAC = 0x10,
+	PC_Inquire_DAC = 0x0a,
+	PC_Inquire_SpecialADCWithTime = 0x0b,
+	PC_Inquire_SpecialADCTrigger = 0x0c,
+	PC_Inquire_SpecialStatus = 0x0d,
 	PC_Inquire_Status = 0x1f,
 
 	PC_Control_Mask = 0x20,
@@ -46,6 +52,8 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_AutoControl_SM_By_Step = 0x41,
 	PC_AutoControl_SM_By_Limit = 0x42,
 	PC_AutoControl_SM_By_Step_With_ADC_And_Encoder = 0x43,
+	PC_AutoControl_SpecialADCWithTime = 0x44,
+	PC_AutoControl_SpecialADCWithTrigger = 0x45,
 
 	PC_Setting_Mask = 0xa0,
 	PC_Setting_SM_Speed = 0xa1,
@@ -67,6 +75,7 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_Post_Mask = 0xe0,
 	PC_Post_Get = 0xe1,
 	PC_Post_Complete = 0xe2,
+	PC_Post_Error = 0xe3,
 
 	PC_None = 0xff
 } PC_Typedef;
@@ -103,7 +112,7 @@ public:
 	static inline void Send(Salve_Typedef salve, PC_Typedef com) {
 		Send(salve, com, 0, (uint8_t*) 0x00);
 	}
-	static void Receive(Salve_Typedef salve, uint8_t len);
+	static void Receive(Salve_Typedef salve, uint8_t* data, uint8_t len);
 };
 
 #endif /* PROTOCOL_H_ */

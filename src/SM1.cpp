@@ -39,8 +39,13 @@ bool SM1::FullSpeed = false;
 bool SM1::GearSpeed = false;
 bool SM1::Busy = false;
 
-uint8_t SM1::UpwardLimit = 0x04;
-uint8_t SM1::BackwardLimit = 0x01;
+//摩擦试验机
+//uint8_t SM1::UpwardLimit = 0x04;
+//uint8_t SM1::BackwardLimit = 0x01;
+//SM_DIR_Typedef SM1::DefaultDir = SM_DIR_Upward;
+
+uint8_t SM1::UpwardLimit = 0x01;
+uint8_t SM1::BackwardLimit = 0x02;
 SM_DIR_Typedef SM1::DefaultDir = SM_DIR_Upward;
 
 void SM1::Init() {
@@ -83,8 +88,8 @@ void SM1::Move(uint32_t step, SM_DIR_Typedef dir) {
 	if (SpeedAcc) {
 		FullSpeed = false;
 		//计算减速区间
-		uint32_t airStep = ((uint64_t) (MaxSpeed - STARTSPEED)
-				* (uint64_t) MaxSpeed / TgtAcc) >> 1;
+		uint32_t airStep =
+				((uint64_t) (MaxSpeed) * (uint64_t) MaxSpeed / TgtAcc) >> 1;
 		if ((TgtStep >> 1) > airStep) {
 			//大于两倍空中时间，完整的加减速曲线
 			GearStep = airStep;
@@ -123,6 +128,7 @@ void SM1::Run(SM_DIR_Typedef dir) {
 
 	Limit::RefreshData();
 	switch (dir) {
+
 	case SM_DIR_Upward:
 		if ((Limit::Data & UpwardLimit) != 0) {
 			return;
@@ -258,9 +264,9 @@ void SM1::TIMInit() {
 	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable; //使能
 	TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Disable; //关闭互补输出
 	TIM_OCInitStructure.TIM_Pulse = MaxSpeed / TIM_ACC->CNT >> 1; //脉冲宽度
-	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low; //高电平有效
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low; //低电平有效
 	TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_Low; //低电平有效
-	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set; //低电平
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset; //低电平
 	TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset; //低电平
 	TIM_OC1Init(TIM_PUL, &TIM_OCInitStructure); //初始化
 	TIM_CtrlPWMOutputs(TIM8, ENABLE);
@@ -296,12 +302,14 @@ void TIM7_IRQHandler(void) {
 }
 
 void TIM8_UP_IRQHandler(void) {
+	TIM_PUL->SR = (uint16_t) ~TIM_IT_Update;
 	SM1::CurStep++;
 //预定步数未到，继续累加
 	if ((SM1::CurStep < SM1::TgtStep) || SM1::NoStep) {
 		//有加减速
 		if (SM1::SpeedAcc) {
-			if ((SM1::TgtStep - SM1::CurStep) > SM1::GearStep) {
+			if (((SM1::TgtStep - SM1::CurStep) > SM1::GearStep)
+					|| SM1::NoStep) {
 				//未到达减速区间
 				if (SM1::FullSpeed == false) {
 					if (TIM_ACC->CNT == SM1::MaxSpeed) {
@@ -325,7 +333,7 @@ void TIM8_UP_IRQHandler(void) {
 					SM1::GearSpeed = true;
 				} else {
 					//根据减速计算速度
-					uint16_t speed = TIM_ACC->ARR - TIM_ACC->CNT;
+					uint16_t speed = SM1::MaxSpeed - TIM_ACC->CNT;
 					//限制最小速度
 					speed = speed < 200 ? 200 : speed;
 					TIM_PUL->ARR = SystemCoreClock / speed >> 3;
@@ -340,7 +348,6 @@ void TIM8_UP_IRQHandler(void) {
 		SM1::GearSpeed = false;
 		SM1::Busy = false;
 	}
-	TIM_PUL->SR = (uint16_t) ~TIM_IT_Update;
 }
 
 }

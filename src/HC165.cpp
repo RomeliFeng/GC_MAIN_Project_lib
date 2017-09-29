@@ -80,7 +80,7 @@ void HC165Class::GPIOInit() {
 	GPIO_Init(GPIOPort, &GPIO_InitStructure);
 
 	GPIO_InitStructure.GPIO_Pin = DAT_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
 	GPIO_Init(GPIOPort, &GPIO_InitStructure);
 }
 

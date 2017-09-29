@@ -36,13 +36,26 @@ void Limit::RefreshData() {
 			| ((GPIOB->IDR & Lim5_7MASK) << 5));
 }
 
+void Limit::Waitting(uint8_t sensorNo) {
+	bool flag = false;
+	uint8_t limitNo = 1 << sensorNo;
+	while (true) {
+		RefreshData();
+		if ((Limit::Data & limitNo) != 0) {
+			flag = true;
+		} else if ((flag != false) && ((Limit::Data & limitNo) == 0)) {
+			break;
+		}
+	}
+}
+
 void Limit::GPIOInit() {
 	GPIO_InitTypeDef GPIO_InitStructure;
 	RCC_APB2PeriphClockCmd(
 	RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB | RCC_APB2Periph_GPIOC, ENABLE);
 
 	GPIO_InitStructure.GPIO_Pin = LIM0_PIN | LIM1_PIN | LIM2_PIN;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOA, &GPIO_InitStructure);
 
@@ -52,3 +65,4 @@ void Limit::GPIOInit() {
 	GPIO_InitStructure.GPIO_Pin = LIM5_PIN | LIM6_PIN | LIM7_PIN;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
 }
+

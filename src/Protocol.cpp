@@ -33,7 +33,11 @@ void U_USART3_Event() {
 		Protocol::Send(PC_Post_Get, databuf.data[LEN_OFF], Protocol::P_Rcv.pc,
 				Protocol::P_Rcv.data);
 	} else {
-		U_USART3.println("error");
+		if (result == PA_CheckSumError) {
+			Protocol::Send(PC_Post_Error, result);
+		} else {
+			Protocol::Send(PC_Post_Error, 0xff);
+		}
 	}
 	U_USART3.clear();
 }
@@ -127,9 +131,8 @@ void Protocol::Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
 	SPIBUS::Select(salve, DISABLE);
 }
 
-void Protocol::Receive(Salve_Typedef salve, uint8_t len) {
-	DataBuf_Typedef sendbuf;
+void Protocol::Receive(Salve_Typedef salve, uint8_t* data, uint8_t len) {
 	SPIBUS::Select(salve, ENABLE);
-	U_SPI2::ReceiveSync(sendbuf.data, 1 + 2 + 1 + len + 1);
+	U_SPI2::ReceiveSync(data, len);
 	SPIBUS::Select(salve, DISABLE);
 }

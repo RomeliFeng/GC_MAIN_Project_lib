@@ -26,13 +26,16 @@
 
 #include "TimeTick.h"
 
-TwoWordtoByteSigned_Typedef Function::ASBSWAAE_Pos[512];
-WordtoByteSigned_Typedef Function::ASBSWAAE_ADC[512];
+//TwoWordtoByteSigned_Typedef Function::ASBSWAAE_Pos[512];
+//WordtoByteSigned_Typedef Function::ASBSWAAE_ADC[512];
+WordtoByteSigned_Typedef Function::ADCDATA[2048];
 
 PIDParam_Typedef Function::PIDParam = { 0, 0, 0 };
 PIDClass Function::PID = PIDClass(0, 0, 0, 0.001, PIDDir_Negtive, &PIDParam,
 		PIDMode_Diff);
 bool Function::PIDEnable = false;
+bool Function::AutoControl_SpecialADCWithTime_Busy = false;
+bool Function::AutoControl_SpecialADCWithTrigger_Busy = false;
 
 void Function::Enter(P_Buf_Typedef* p_buf) {
 	uint8_t mask = p_buf->pc & PC_Mask;
@@ -86,15 +89,29 @@ void Function::Inquire(P_Buf_Typedef* p_buf) {
 	case PC_Inquire_Motor:
 		Inquire_Motor();
 		break;
-	case PC_Inquire_Special:
+	case PC_Inquire_Special: {
 		WordtoByte_Typedef num;
 		num.byte[0] = p_buf->data[0];
 		num.byte[1] = p_buf->data[1];
 		num.word = num.word > 1024 ? 1024 : num.word;
 		Inquire_Special(num.word);
+	}
 		break;
 	case PC_Inquire_DAC:
 		Inquire_DAC(p_buf->data[0]);
+		break;
+	case PC_Inquire_SpecialADCWithTime: {
+		WordtoByte_Typedef num;
+		num.byte[0] = p_buf->data[0];
+		num.byte[1] = p_buf->data[1];
+		Inquire_SpecialADCWithTime(num.word);
+	}
+		break;
+	case PC_Inquire_SpecialADCTrigger:
+		Inquire_SpecialADCWithTrigger(p_buf->data[0]);
+		break;
+	case PC_Inquire_SpecialStatus:
+		Inquire_SpecialStatus(PC_Inquire_SpecialADCTrigger);
 		break;
 	case PC_Inquire_Status:
 		Inquire_Status(p_buf->data[0]);
@@ -187,6 +204,18 @@ void Function::AutoControl(P_Buf_Typedef* p_buf) {
 				step.twoword, p_buf->data[5], p_buf->data[6], num.word);
 		break;
 	}
+	case PC_AutoControl_SpecialADCWithTime: {
+		WordtoByte_Typedef num;
+		num.byte[0] = p_buf->data[2];
+		num.byte[1] = p_buf->data[3];
+		AutoControl_SpecialADCWithTime(p_buf->data[0], p_buf->data[1],
+				num.word);
+	}
+		break;
+	case PC_AutoControl_SpecialADCWithTrigger:
+		AutoControl_SpecialADCTrigger(p_buf->data[0], p_buf->data[1],
+				p_buf->data[2], p_buf->data[3]);
+		break;
 	default:
 		break;
 	}
@@ -332,12 +361,13 @@ void Function::Inquire_ADC(uint8_t no) {
 	case 0:
 		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, U_ADC1::Data.byte);
 		break;
-	case 1:
+	case 1: {
 		Protocol::Send(Salve_AC, PC_Inquire_ADC);
 		if (SPIBUS::CheckReady()) {
-			Protocol::Receive(Salve_AC, 2);
+			Protocol::Receive(Salve_AC, data.byte, 2);
 		}
 		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, data.byte);
+	}
 		break;
 	default:
 		break;
@@ -358,21 +388,23 @@ void Function::Inquire_Motor() {
 	speed.word = (PowerDev::Status & MotorMask) == 0 ? -TIM3->CCR4 : TIM3->CCR4;
 	Protocol::Send(PC_Post_Complete, 2, PC_Inquire_Motor, speed.byte);
 }
-
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
 void Function::Inquire_Special(uint16_t num) {
 	uint8_t tmp[4096];
 	uint16_t index = 0;
 
-	for (; index < num; index++) {
-		tmp[index * 4] = ASBSWAAE_Pos[index].byte[0];
-		tmp[index * 4 + 1] = ASBSWAAE_Pos[index].byte[1];
-		tmp[index * 4 + 2] = ASBSWAAE_Pos[index].byte[2];
-		tmp[index * 4 + 3] = ASBSWAAE_Pos[index].byte[3];
-		tmp[index * 2 + (uint16_t) num * 4] = ASBSWAAE_ADC[index].byte[0];
-		tmp[index * 2 + (uint16_t) num * 4 + 1] = ASBSWAAE_ADC[index].byte[1];
-	}
+//	for (; index < num; index++) {
+//		tmp[index * 4] = ASBSWAAE_Pos[index].byte[0];
+//		tmp[index * 4 + 1] = ASBSWAAE_Pos[index].byte[1];
+//		tmp[index * 4 + 2] = ASBSWAAE_Pos[index].byte[2];
+//		tmp[index * 4 + 3] = ASBSWAAE_Pos[index].byte[3];
+//		tmp[index * 2 + (uint16_t) num * 4] = ASBSWAAE_ADC[index].byte[0];
+//		tmp[index * 2 + (uint16_t) num * 4 + 1] = ASBSWAAE_ADC[index].byte[1];
+//	}
 	Protocol::Send(PC_Post_Complete, num * 6, PC_Inquire_Special, tmp);
 }
+#pragma GCC diagnostic pop
 
 void Function::Inquire_DAC(uint8_t no) {
 	switch (no) {
@@ -384,6 +416,43 @@ void Function::Inquire_DAC(uint8_t no) {
 	default:
 		break;
 	}
+}
+
+void Function::Inquire_SpecialADCWithTime(uint16_t num) {
+	uint8_t tmp[4096];
+	uint16_t index = 0;
+	for (; index < num; ++index) {
+		tmp[index << 1] = ADCDATA[index].byte[0];
+		tmp[(index << 1) + 1] = ADCDATA[index].byte[1];
+	}
+	Protocol::Send(PC_Post_Complete, num << 1, PC_Inquire_SpecialADCWithTime,
+			tmp);
+}
+
+void Function::Inquire_SpecialADCWithTrigger(uint8_t num) {
+	uint8_t tmp[512];
+	uint16_t index = 0;
+	for (; index < num; ++index) {
+		tmp[index << 1] = ADCDATA[index].byte[0];
+		tmp[(index << 1) + 1] = ADCDATA[index].byte[1];
+	}
+	Protocol::Send(PC_Post_Complete, num << 1, PC_Inquire_SpecialADCTrigger,
+			tmp);
+}
+
+void Function::Inquire_SpecialStatus(PC_Typedef pc) {
+	uint8_t status = 0x00;
+	switch (pc) {
+	case PC_Inquire_SpecialADCWithTime:
+		status = (uint8_t) AutoControl_SpecialADCWithTime_Busy;
+		break;
+	case PC_Inquire_SpecialADCTrigger:
+		status = (uint8_t) AutoControl_SpecialADCWithTrigger_Busy;
+		break;
+	default:
+		break;
+	}
+	Protocol::Send(PC_Post_Complete, 1, PC_Inquire_SpecialStatus, &status);
 }
 
 void Function::Inquire_Status(uint8_t no) {
@@ -504,58 +573,104 @@ bool Function::AutoControl_SM_By_Limit_Judge(uint8_t limitNo) {
 	return ((Limit::Data & (1 << limitNo)) == 0);
 }
 
+#pragma GCC diagnostic ignored "-Wunused-parameter"
 void Function::AutoControl_SM_By_Step_With_ADC_And_Encoder(uint8_t no,
 		int32_t step, uint8_t encoderNo, uint8_t adcNo, uint16_t num) {
-	uint16_t index = 0;
-	AutoControl_SM_By_Step(no, step);
-	switch (no) {
-	case 1:
-		while (SM1::CurStep < SM1::TgtStep) { //速度 10k 加速度100k时会导致步进电机自己停止
-			if (!SM1::Busy) {
+//	uint16_t index = 0;
+//	AutoControl_SM_By_Step(no, step);
+//	switch (no) {
+//	case 1:
+//		while (SM1::CurStep < SM1::TgtStep) { //速度 10k 加速度100k时会导致步进电机自己停止
+//			if (!SM1::Busy) {
+//				break;
+//			}
+//			if (SM1::CurStep >= (SM1::TgtStep / num * index)) {
+//				switch (encoderNo) {
+//				case 2:
+//					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
+//					break;
+//				case 4:
+//					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
+//					break;
+//				default:
+//					break;
+//				}
+//				ExADC::RefreshData();
+//				ASBSWAAE_ADC[index].word = ExADC::Data[adcNo].word;
+//				index++;
+//			}
+//		}
+//		break;
+//	case 2:
+//		while (SM2::CurStep < SM2::TgtStep) {
+//			if (SM2::CurStep >= (SM2::TgtStep / num * index)) {
+//				if (!SM2::Busy) {
+//					break;
+//				}
+//				switch (encoderNo) {
+//				case 2:
+//					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
+//					break;
+//				case 4:
+//					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
+//					break;
+//				default:
+//					break;
+//				}
+//				ExADC::RefreshData();
+//				ASBSWAAE_ADC[index].word = ExADC::Data[adcNo].word;
+//				index++;
+//			}
+//		}
+//		break;
+//	default:
+//		break;
+//	}
+}
+
+#pragma GCC diagnostic pop
+
+void Function::AutoControl_SpecialADCWithTime(uint8_t ms, uint8_t adcNo,
+		uint16_t num) {
+	uint64_t last = micros();
+
+	AutoControl_SpecialADCWithTime_Busy = true;
+	for (uint16_t i = 0; i < num; ++i) {
+		while (micros() - last < ms * 1000)
+			;
+		last = micros();
+		ExADC::RefreshData();
+		ADCDATA[i].word = ExADC::Data[adcNo].word;
+	}
+	AutoControl_SpecialADCWithTime_Busy = false;
+}
+
+void Function::AutoControl_SpecialADCTrigger(uint8_t sensorNo, uint8_t moment,
+		uint8_t adcNo, uint8_t num) {
+	static uint64_t last;
+	static uint64_t triggerTime;
+	static uint32_t timeSpan;
+
+	AutoControl_SpecialADCWithTrigger_Busy = true;
+
+	Limit::Waitting(sensorNo); //等待到达凹槽
+	last = micros();
+	Limit::Waitting(sensorNo); //第二次到达凹槽
+	timeSpan = micros() - last; //计算凹槽之间时间
+	triggerTime = timeSpan / 255.0 * moment; //计算触发事件
+	for (uint8_t i = 0; i < num; ++i) {
+		last = micros();
+		while (true) {
+			if (micros() - last >= triggerTime) {
+				ExADC::RefreshData();
+				ADCDATA[i].word = ExADC::Data[adcNo].word;
 				break;
 			}
-			if (SM1::CurStep >= (SM1::TgtStep / num * index)) {
-				switch (encoderNo) {
-				case 2:
-					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
-					break;
-				case 4:
-					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
-					break;
-				default:
-					break;
-				}
-				ExADC::RefreshData();
-				ASBSWAAE_ADC[index].word = ExADC::Data[adcNo].word;
-				index++;
-			}
 		}
-		break;
-	case 2:
-		while (SM2::CurStep < SM2::TgtStep) {
-			if (SM2::CurStep >= (SM2::TgtStep / num * index)) {
-				if (!SM2::Busy) {
-					break;
-				}
-				switch (encoderNo) {
-				case 2:
-					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
-					break;
-				case 4:
-					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
-					break;
-				default:
-					break;
-				}
-				ExADC::RefreshData();
-				ASBSWAAE_ADC[index].word = ExADC::Data[adcNo].word;
-				index++;
-			}
-		}
-		break;
-	default:
-		break;
+		Limit::Waitting(sensorNo);
 	}
+
+	AutoControl_SpecialADCWithTrigger_Busy = false;
 }
 
 void Function::Setting_SM_Speed(uint8_t no, uint16_t speed, uint32_t tgtAcc) {
