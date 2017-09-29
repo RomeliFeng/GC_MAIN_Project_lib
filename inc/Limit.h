@@ -15,6 +15,7 @@ public:
 	static uint8_t Data;
 	static void Init();
 	static void RefreshData();
+	static void Waitting(uint8_t sensorNo);
 private:
 	static void GPIOInit();
 };
