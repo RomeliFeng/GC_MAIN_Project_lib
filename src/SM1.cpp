@@ -37,7 +37,7 @@ bool SM1::SpeedAcc = true;
 bool SM1::NoStep = false;
 bool SM1::FullSpeed = false;
 bool SM1::GearSpeed = false;
-bool SM1::Busy = false;
+volatile bool SM1::Busy = false;
 
 //摩擦试验机
 //uint8_t SM1::UpwardLimit = 0x04;

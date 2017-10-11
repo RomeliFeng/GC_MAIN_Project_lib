@@ -36,7 +36,7 @@ bool SM2::SpeedAcc = true;
 bool SM2::NoStep = false;
 bool SM2::FullSpeed = false;
 bool SM2::GearSpeed = false;
-bool SM2::Busy = false;
+volatile bool SM2::Busy = false;
 
 //摩擦试验机
 //uint8_t SM2::UpwardLimit = 0x20;

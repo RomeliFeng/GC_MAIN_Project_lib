@@ -23,7 +23,7 @@ public:
 	static bool NoStep;
 	static bool FullSpeed;
 	static bool GearSpeed;
-	static bool Busy;
+	volatile static bool Busy;
 	static uint8_t UpwardLimit;
 	static uint8_t BackwardLimit;
 	static SM_DIR_Typedef DefaultDir;
