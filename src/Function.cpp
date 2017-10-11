@@ -9,6 +9,8 @@
 
 #include "Delay.h"
 
+#include "LED.h"
+
 #include "SM1.h"
 #include "SM2.h"
 
@@ -36,6 +38,7 @@ PIDClass Function::PID = PIDClass(0, 0, 0, 0.001, PIDDir_Negtive, &PIDParam,
 bool Function::PIDEnable = false;
 bool Function::AutoControl_SpecialADCWithTime_Busy = false;
 bool Function::AutoControl_SpecialADCWithTrigger_Busy = false;
+bool Function::AutoControl_SpecialMotorPosition_Busy = false;
 
 void Function::Enter(P_Buf_Typedef* p_buf) {
 	uint8_t mask = p_buf->pc & PC_Mask;
@@ -111,7 +114,7 @@ void Function::Inquire(P_Buf_Typedef* p_buf) {
 		Inquire_SpecialADCWithTrigger(p_buf->data[0]);
 		break;
 	case PC_Inquire_SpecialStatus:
-		Inquire_SpecialStatus(PC_Inquire_SpecialADCTrigger);
+		Inquire_SpecialStatus(PC_AutoControl_SpecialADCWithTrigger);
 		break;
 	case PC_Inquire_Status:
 		Inquire_Status(p_buf->data[0]);
@@ -174,6 +177,8 @@ void Function::Control(P_Buf_Typedef* p_buf) {
 void Function::AutoControl(P_Buf_Typedef* p_buf) {
 	uint8_t ttt = 0;
 	Protocol::Send(PC_Post_Complete, 0, p_buf->pc, &ttt);
+
+	LED::Turn(Color_Blue);
 	switch (p_buf->pc) {
 	case PC_AutoControl_SM_By_Step: {
 		TwoWordtoByteSigned_Typedef step;
@@ -213,8 +218,15 @@ void Function::AutoControl(P_Buf_Typedef* p_buf) {
 	}
 		break;
 	case PC_AutoControl_SpecialADCWithTrigger:
-		AutoControl_SpecialADCTrigger(p_buf->data[0], p_buf->data[1],
+		AutoControl_SpecialADCWithTrigger(p_buf->data[0], p_buf->data[1],
 				p_buf->data[2], p_buf->data[3]);
+		break;
+	case PC_AutoControl_SpecialMotorPosition: {
+		WordtoByte_Typedef ms;
+		ms.byte[0] = p_buf->data[1];
+		ms.byte[1] = p_buf->data[2];
+		AutoControl_SpecialMotorPosition(p_buf->data[0], ms.word);
+	}
 		break;
 	default:
 		break;
@@ -443,11 +455,14 @@ void Function::Inquire_SpecialADCWithTrigger(uint8_t num) {
 void Function::Inquire_SpecialStatus(PC_Typedef pc) {
 	uint8_t status = 0x00;
 	switch (pc) {
-	case PC_Inquire_SpecialADCWithTime:
+	case PC_AutoControl_SpecialADCWithTime:
 		status = (uint8_t) AutoControl_SpecialADCWithTime_Busy;
 		break;
-	case PC_Inquire_SpecialADCTrigger:
+	case PC_AutoControl_SpecialADCWithTrigger:
 		status = (uint8_t) AutoControl_SpecialADCWithTrigger_Busy;
+		break;
+	case PC_AutoControl_SpecialMotorPosition:
+		status = (uint8_t) AutoControl_SpecialMotorPosition_Busy;
 		break;
 	default:
 		break;
@@ -645,8 +660,8 @@ void Function::AutoControl_SpecialADCWithTime(uint8_t ms, uint8_t adcNo,
 	AutoControl_SpecialADCWithTime_Busy = false;
 }
 
-void Function::AutoControl_SpecialADCTrigger(uint8_t sensorNo, uint8_t moment,
-		uint8_t adcNo, uint8_t num) {
+void Function::AutoControl_SpecialADCWithTrigger(uint8_t sensorNo,
+		uint8_t moment, uint8_t adcNo, uint8_t num) {
 	static uint64_t last;
 	static uint64_t triggerTime;
 	static uint32_t timeSpan;
@@ -659,6 +674,7 @@ void Function::AutoControl_SpecialADCTrigger(uint8_t sensorNo, uint8_t moment,
 	timeSpan = micros() - last; //计算凹槽之间时间
 	triggerTime = timeSpan / 255.0 * moment; //计算触发事件
 	for (uint8_t i = 0; i < num; ++i) {
+		LED::Turn(Color_Yellow);
 		last = micros();
 		while (true) {
 			if (micros() - last >= triggerTime) {
@@ -667,10 +683,28 @@ void Function::AutoControl_SpecialADCTrigger(uint8_t sensorNo, uint8_t moment,
 				break;
 			}
 		}
+		LED::Turn(Color_Blue);
 		Limit::Waitting(sensorNo);
+	}
+	last = micros();
+	while (true) {
+		if (micros() - last >= triggerTime) {
+			PowerDev::Motor(0);
+			break;
+		}
 	}
 
 	AutoControl_SpecialADCWithTrigger_Busy = false;
+}
+
+void Function::AutoControl_SpecialMotorPosition(uint8_t sensorNo, uint16_t ms) {
+	AutoControl_SpecialMotorPosition_Busy = true;
+
+	Limit::Waitting(sensorNo);
+	Delay_ms(ms);
+	PowerDev::Motor(0);
+
+	AutoControl_SpecialMotorPosition_Busy = false;
 }
 
 void Function::Setting_SM_Speed(uint8_t no, uint16_t speed, uint32_t tgtAcc) {

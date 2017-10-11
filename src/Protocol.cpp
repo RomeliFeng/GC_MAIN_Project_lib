@@ -21,7 +21,6 @@ P_Buf_Typedef Protocol::P_Run2;
 
 void U_USART3_Event() {
 	P_Buf_Typedef databuf;
-	LED::Turn(Color_Blue);
 	PA_Typedef result = Protocol::Analysis(&databuf);
 	if (result == PA_Ok) {
 		Protocol::P_Rcv.pc = (PC_Typedef) databuf.data[CMD_OFF];

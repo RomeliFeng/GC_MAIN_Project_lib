@@ -11,7 +11,7 @@
 #include "cmsis_device.h"
 
 typedef enum _Color_Typedef {
-	Color_None, Color_Red, Color_Blue, Color_Green
+	Color_None, Color_Red, Color_Blue, Color_Green, Color_Purple, Color_Yellow
 } Color_Typedef;
 
 class LED {

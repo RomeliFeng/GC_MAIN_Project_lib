@@ -22,6 +22,7 @@ public:
 	static bool PIDEnable;
 	static bool AutoControl_SpecialADCWithTime_Busy;
 	static bool AutoControl_SpecialADCWithTrigger_Busy;
+	static bool AutoControl_SpecialMotorPosition_Busy;
 
 	static void Enter(P_Buf_Typedef* p_buf);
 
@@ -61,8 +62,9 @@ public:
 			int32_t step, uint8_t encoderNo, uint8_t adcNo, uint16_t num);
 	static void AutoControl_SpecialADCWithTime(uint8_t ms, uint8_t adcNo,
 			uint16_t num);
-	static void AutoControl_SpecialADCTrigger(uint8_t sensorNo, uint8_t moment,
-			uint8_t adcNo, uint8_t num);
+	static void AutoControl_SpecialADCWithTrigger(uint8_t sensorNo,
+			uint8_t moment, uint8_t adcNo, uint8_t num);
+	static void AutoControl_SpecialMotorPosition(uint8_t sensorNo, uint16_t ms);
 
 	static void Setting_SM_Speed(uint8_t no, uint16_t speed, uint32_t tgtAcc);
 	static void Setting_Valve_Default(uint32_t status);

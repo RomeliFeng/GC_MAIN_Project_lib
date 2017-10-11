@@ -44,6 +44,16 @@ void LED::Turn(Color_Typedef color) {
 		BLUE_SET;
 		GREEN_RESET;
 		break;
+	case Color_Purple:
+		RED_SET;
+		BLUE_RESET;
+		GREEN_RESET;
+		break;
+	case Color_Yellow:
+		RED_RESET;
+		BLUE_SET;
+		GREEN_RESET;
+		break;
 	default:
 		break;
 	}

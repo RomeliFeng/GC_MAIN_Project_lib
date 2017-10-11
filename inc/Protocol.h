@@ -54,6 +54,7 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_AutoControl_SM_By_Step_With_ADC_And_Encoder = 0x43,
 	PC_AutoControl_SpecialADCWithTime = 0x44,
 	PC_AutoControl_SpecialADCWithTrigger = 0x45,
+	PC_AutoControl_SpecialMotorPosition = 0x46,
 
 	PC_Setting_Mask = 0xa0,
 	PC_Setting_SM_Speed = 0xa1,
