@@ -44,8 +44,10 @@ volatile bool SM1::Busy = false;
 //uint8_t SM1::BackwardLimit = 0x01;
 //SM_DIR_Typedef SM1::DefaultDir = SM_DIR_Upward;
 
-uint8_t SM1::UpwardLimit = 0x01;
-uint8_t SM1::BackwardLimit = 0x02;
+//uint8_t SM1::UpwardLimit = 0x01;
+//uint8_t SM1::BackwardLimit = 0x02;
+uint8_t SM1::UpwardLimit = 0x00;
+uint8_t SM1::BackwardLimit = 0x00;
 SM_DIR_Typedef SM1::DefaultDir = SM_DIR_Upward;
 
 void SM1::Init() {
@@ -269,7 +271,7 @@ void SM1::TIMInit() {
 	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Reset; //低电平
 	TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCNIdleState_Reset; //低电平
 	TIM_OC1Init(TIM_PUL, &TIM_OCInitStructure); //初始化
-	TIM_CtrlPWMOutputs(TIM8, ENABLE);
+	TIM_CtrlPWMOutputs(TIM_PUL, ENABLE);
 }
 
 void SM1::NVICInit() {
@@ -278,13 +280,13 @@ void SM1::NVICInit() {
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_ACC_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init(&NVIC_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_PUL_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init(&NVIC_InitStructure);
 
 	TIM_ClearITPendingBit(TIM_ACC, TIM_IT_Update);

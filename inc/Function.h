@@ -15,13 +15,17 @@
 
 class Function {
 public:
-	static WordtoByteSigned_Typedef ADCDATA[2048];
+	static TwoWordtoByteSigned_Typedef ASBSWAAE_Pos[512];
+	static WordtoByteSigned_Typedef ASBSWAAE_ADC[512];
+	static WordtoByteSigned_Typedef ADCDATA[128];
+	static WordtoByteSigned_Typedef ADCDATA2[128];
 
 	static PIDParam_Typedef PIDParam;
 	static PIDClass PID;
 	static bool PIDEnable;
 	static bool AutoControl_SpecialADCWithTime_Busy;
 	static bool AutoControl_SpecialADCWithTrigger_Busy;
+	static bool AutoControl_SpecialDoubleADCWithTrigger_Busy;
 	static bool AutoControl_SpecialMotorPosition_Busy;
 
 	static void Enter(P_Buf_Typedef* p_buf);
@@ -44,6 +48,7 @@ public:
 	static void Inquire_DAC(uint8_t no);
 	static void Inquire_SpecialADCWithTime(uint16_t num);
 	static void Inquire_SpecialADCWithTrigger(uint8_t num);
+	static void Inquire_SpecialDoubleADCWithTrigger(uint8_t num);
 	static void Inquire_SpecialStatus(PC_Typedef pc);
 	static void Inquire_Status(uint8_t no);
 
@@ -64,6 +69,8 @@ public:
 			uint16_t num);
 	static void AutoControl_SpecialADCWithTrigger(uint8_t sensorNo,
 			uint8_t moment, uint8_t adcNo, uint8_t num);
+	static void AutoControl_SpecialDoubleADCWithTrigger(uint8_t sensorNo,
+			uint8_t moment, uint8_t adcNo, uint8_t adcNo2, uint8_t num);
 	static void AutoControl_SpecialMotorPosition(uint8_t sensorNo, uint16_t ms);
 
 	static void Setting_SM_Speed(uint8_t no, uint16_t speed, uint32_t tgtAcc);

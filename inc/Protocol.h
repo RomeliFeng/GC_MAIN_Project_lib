@@ -38,6 +38,7 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_Inquire_SpecialADCWithTime = 0x0b,
 	PC_Inquire_SpecialADCTrigger = 0x0c,
 	PC_Inquire_SpecialStatus = 0x0d,
+	PC_Inquire_SpecialDoubleADCTrigger = 0x0e,
 	PC_Inquire_Status = 0x1f,
 
 	PC_Control_Mask = 0x20,
@@ -55,6 +56,7 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_AutoControl_SpecialADCWithTime = 0x44,
 	PC_AutoControl_SpecialADCWithTrigger = 0x45,
 	PC_AutoControl_SpecialMotorPosition = 0x46,
+	PC_AutoControl_SpecialADCDoubleWithTrigger = 0x47,
 
 	PC_Setting_Mask = 0xa0,
 	PC_Setting_SM_Speed = 0xa1,

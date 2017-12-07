@@ -65,7 +65,8 @@ void ExADC::RefreshData() {
 	__NOP();
 	__NOP();
 
-	for (uint8_t i = 0; i < 1; i++) {
+	//姑且只读4个数
+	for (uint8_t i = 0; i < 2; i++) {
 		for (uint16_t j = 0x8000; j != 0; j >>= 1) {
 			SCLK_RESET;
 			__NOP();

@@ -43,8 +43,10 @@ volatile bool SM2::Busy = false;
 //uint8_t SM2::BackwardLimit = 0x08;
 //SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Backward;
 
-uint8_t SM2::UpwardLimit = 0x04;
-uint8_t SM2::BackwardLimit = 0x08;
+//uint8_t SM2::UpwardLimit = 0x04;
+//uint8_t SM2::BackwardLimit = 0x08;
+uint8_t SM2::UpwardLimit = 0x00;
+uint8_t SM2::BackwardLimit = 0x00;
 SM_DIR_Typedef SM2::DefaultDir = SM_DIR_Upward;
 
 void SM2::Init() {
@@ -274,13 +276,13 @@ void SM2::NVICInit() {
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_ACC_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init(&NVIC_InitStructure);
 
 	NVIC_InitStructure.NVIC_IRQChannel = TIM_PUL_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 3;
+	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_Init(&NVIC_InitStructure);
 
 	TIM_ClearITPendingBit(TIM_ACC, TIM_IT_Update);
