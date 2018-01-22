@@ -8,8 +8,8 @@
 #ifndef EXLIMIT_H_
 #define EXLIMIT_H_
 
+#include "U_Misc.h"
 #include "cmsis_device.h"
-#include "Typedef.h"
 
 class ExLimit {
 public:

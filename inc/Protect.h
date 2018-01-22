@@ -8,9 +8,7 @@
 #ifndef PROTECT_H_
 #define PROTECT_H_
 
-#include "SM.h"
-#include "SM1.h"
-#include "SM2.h"
+#include "Module.h"
 #include "Limit.h"
 
 class Protect {

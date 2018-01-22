@@ -67,7 +67,7 @@ void PowerDev::Motor(int16_t speed) {
 		speed = -speed;
 		Status &= (~MotorMask);
 	}
-	TIM3->CCR4 = speed;
+	TIM3->CCR4 = speed / 10;
 	RefreshData();
 
 	__enable_irq();
@@ -95,8 +95,8 @@ void PowerDev::TIMInit() {
 	TIM_TimeBaseStructInit(&TIM_TimeBaseInitStructure);
 	TIM_TimeBaseInitStructure.TIM_CounterMode = TIM_CounterMode_Up;
 	TIM_TimeBaseInitStructure.TIM_ClockDivision = TIM_CKD_DIV1;
-	TIM_TimeBaseInitStructure.TIM_Prescaler = 0;
-	TIM_TimeBaseInitStructure.TIM_Period = 30000;
+	TIM_TimeBaseInitStructure.TIM_Prescaler = 9;
+	TIM_TimeBaseInitStructure.TIM_Period = 3000;
 	TIM_TimeBaseInitStructure.TIM_RepetitionCounter = 0;
 	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseInitStructure);
 

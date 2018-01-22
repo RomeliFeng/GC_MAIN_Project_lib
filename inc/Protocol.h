@@ -8,11 +8,10 @@
 #ifndef PROTOCOL_H_
 #define PROTOCOL_H_
 
+#include "U_Misc.h"
 #include "cmsis_device.h"
-#include "Typedef.h"
 #include "SPIBUS.H"
-#include "U_USART3.h"
-#include "U_SPI2.h"
+#include "Module.h"
 
 typedef enum _PA_Typedef { //Protocol Analysis
 	PA_Ok = 0x00,
@@ -66,8 +65,10 @@ typedef enum _PC_Typedef { //Protocol Command
 	PC_Setting_PIDParam = 0xa5,
 	PC_Setting_PIDInput = 0xa6,
 	PC_Setting_PIDEnable = 0xa7,
+	PC_Setting_SM_RelDir = 0xa8,
 	PC_Setting_USART = 0xbe,
 	PC_Setting_Address = 0xbf,
+
 
 	PC_Special_Mask = 0xc0,
 	PC_Special_Reset = 0xc1,
@@ -103,6 +104,7 @@ public:
 	static P_Buf_Typedef P_Run2;
 
 	static void Init();
+	static void ReceiveEvent();
 	static _PA_Typedef Analysis(P_Buf_Typedef* databuf);
 	static void Send(PC_Typedef com, uint16_t datalen, uint8_t com_get,
 			uint8_t* data);
@@ -110,12 +112,12 @@ public:
 		Send(com, 0, com_get, (uint8_t*) 0x00);
 	}
 
-	static void Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
-			uint8_t* data);
-	static inline void Send(Salve_Typedef salve, PC_Typedef com) {
-		Send(salve, com, 0, (uint8_t*) 0x00);
-	}
-	static void Receive(Salve_Typedef salve, uint8_t* data, uint8_t len);
+//	static void Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
+//			uint8_t* data);
+//	static inline void Send(Salve_Typedef salve, PC_Typedef com) {
+//		Send(salve, com, 0, (uint8_t*) 0x00);
+//	}
+//	static void Receive(Salve_Typedef salve, uint8_t* data, uint8_t len);
 };
 
 #endif /* PROTOCOL_H_ */

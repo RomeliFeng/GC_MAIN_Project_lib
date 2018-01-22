@@ -5,17 +5,12 @@
  *      Author: Romeli
  */
 
+#include <Tool/U_SystemTick.h>
 #include "Function.h"
-
-#include "Delay.h"
 
 #include "LED.h"
 
-#include "SM1.h"
-#include "SM2.h"
-
-#include "OE2.h"
-#include "OE4.h"
+#include "Module.h"
 
 #include "U_ADC1.h"
 #include "ExADC.h"
@@ -34,7 +29,7 @@ WordtoByteSigned_Typedef Function::ADCDATA[128];
 WordtoByteSigned_Typedef Function::ADCDATA2[128];
 
 PIDParam_Typedef Function::PIDParam = { 0, 0, 0 };
-PIDClass Function::PID = PIDClass(0, 0, 0, 0.001, PIDDir_Negtive, &PIDParam,
+U_PID Function::PID = U_PID(0, 0, 0, 0.001, PIDDir_Negtive, &PIDParam,
 		PIDMode_Diff);
 bool Function::PIDEnable = false;
 bool Function::AutoControl_SpecialADCWithTime_Busy = false;
@@ -307,6 +302,9 @@ void Function::Setting(P_Buf_Typedef* p_buf) {
 	case PC_Setting_PIDEnable:
 		Setting_PIDEnable(p_buf->data[0], p_buf->data[1]);
 		break;
+	case PC_Setting_SM_RelDir:
+		Setting_SM_RelDir(p_buf->data[0], p_buf->data[1]);
+		break;
 	case PC_Setting_USART:
 		Setting_USART(p_buf->data[0]);
 		break;
@@ -365,10 +363,10 @@ void Function::Inquire_Encoder(uint8_t no) {
 	TwoWordtoByteSigned_Typedef count;
 	switch (no) {
 	case 2:
-		count.twoword = OE2::GetPos();
+		count.twoword = U_Encoder1.Get();
 		break;
 	case 4:
-		count.twoword = OE4::GetPos();
+		count.twoword = U_Encoder2.Get();
 		break;
 	default:
 		break;
@@ -377,18 +375,16 @@ void Function::Inquire_Encoder(uint8_t no) {
 }
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void Function::Inquire_ADC(uint8_t no) {
-	WordtoByte_Typedef data;
-	data.word = 0;
 	switch (no) {
 	case 0:
 		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, U_ADC1::Data.byte);
 		break;
 	case 1: {
-		Protocol::Send(Salve_AC, PC_Inquire_ADC);
-		if (SPIBUS::CheckReady()) {
-			Protocol::Receive(Salve_AC, data.byte, 2);
-		}
-		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, data.byte);
+//		Protocol::Send(Salve_AC, PC_Inquire_ADC);
+//		if (SPIBUS::CheckReady()) {
+//			Protocol::Receive(Salve_AC, data.byte, 2);
+//		}
+//		Protocol::Send(PC_Post_Complete, 2, PC_Inquire_ADC, data.byte);
 	}
 		break;
 	default:
@@ -433,7 +429,7 @@ void Function::Inquire_DAC(uint8_t no) {
 	case 0:
 		break;
 	case 1:
-		Protocol::Send(Salve_AC, PC_Inquire_DAC);
+//		Protocol::Send(Salve_AC, PC_Inquire_DAC);
 		break;
 	default:
 		break;
@@ -470,8 +466,8 @@ void Function::Inquire_SpecialDoubleADCWithTrigger(uint8_t num) {
 	for (; index < num << 1; ++index) {
 		tmp[index].word = ADCDATA2[index - num].word;
 	}
-	Protocol::Send(PC_Post_Complete, num << 2, PC_Inquire_SpecialDoubleADCTrigger,
-			(uint8_t*) tmp);
+	Protocol::Send(PC_Post_Complete, num << 2,
+			PC_Inquire_SpecialDoubleADCTrigger, (uint8_t*) tmp);
 }
 
 void Function::Inquire_SpecialStatus(PC_Typedef pc) {
@@ -499,10 +495,10 @@ void Function::Inquire_Status(uint8_t no) {
 	uint8_t status = 0x00;
 	switch (no) {
 	case 1:
-		status = (uint8_t) SM1::Busy;
+		status = (uint8_t) U_StepMotor1.IsBusy();
 		break;
 	case 2:
-		status = (uint8_t) SM2::Busy;
+		status = (uint8_t) U_StepMotor2.IsBusy();
 		break;
 	default:
 
@@ -520,19 +516,21 @@ void Function::Control_Motor(int16_t speed) {
 }
 
 void Function::Control_SM(uint8_t no, uint8_t status) {
+	U_StepMotor::Dir_Typedef dir =
+			status == 0 ? U_StepMotor::Dir_CW : U_StepMotor::Dir_CCW;
 	switch (no) {
 	case 1:
 		if (status == 0xff) {
-			SM1::Stop();
+			U_StepMotor1.Stop();
 		} else {
-			SM1::Run(status != 0 ? SM_DIR_Upward : SM_DIR_Backward);
+			U_StepMotor1.Run(dir);
 		}
 		break;
 	case 2:
 		if (status == 0xff) {
-			SM2::Stop();
+			U_StepMotor2.Stop();
 		} else {
-			SM2::Run(status != 0 ? SM_DIR_Upward : SM_DIR_Backward);
+			U_StepMotor2.Run(dir);
 		}
 		break;
 	default:
@@ -562,19 +560,19 @@ void Function::Control_ValveClose(uint32_t status) {
 }
 
 void Function::AutoControl_SM_By_Step(uint8_t no, int32_t step) {
-	SM_DIR_Typedef dir;
+	U_StepMotor::Dir_Typedef dir;
 	if (step > 0) {
-		dir = SM_DIR_Upward;
+		dir = U_StepMotor::Dir_CW;
 	} else {
-		dir = SM_DIR_Backward;
+		dir = U_StepMotor::Dir_CCW;
 		step = -step;
 	}
 	switch (no) {
 	case 1:
-		SM1::Move(step, dir);
+		U_StepMotor1.Move(step, dir);
 		break;
 	case 2:
-		SM2::Move(step, dir);
+		U_StepMotor2.Move(step, dir);
 		break;
 	default:
 		break;
@@ -583,25 +581,29 @@ void Function::AutoControl_SM_By_Step(uint8_t no, int32_t step) {
 
 void Function::AutoControl_SM_By_Limit(uint8_t no, uint8_t status,
 		uint8_t limitNo) {
-	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Upward : SM_DIR_Backward;
+	U_StepMotor::Dir_Typedef dir =
+			status == 0 ? U_StepMotor::Dir_CW : U_StepMotor::Dir_CCW;
+	if (!AutoControl_SM_By_Limit_Judge(limitNo)) {
+		return;
+	}
 	switch (no) {
 	case 1:
-		SM1::Run(dir);
+		U_StepMotor1.Run(dir);
 		while (AutoControl_SM_By_Limit_Judge(limitNo)) {
-			if (!SM1::Busy) {
+			if (!U_StepMotor1.IsBusy()) {
 				break;
 			}
 		}
-		SM1::Stop();
+		U_StepMotor1.Stop();
 		break;
 	case 2:
-		SM2::Run(dir);
+		U_StepMotor2.Run(dir);
 		while (AutoControl_SM_By_Limit_Judge(limitNo)) {
-			if (!SM2::Busy) {
+			if (!U_StepMotor2.IsBusy()) {
 				break;
 			}
 		}
-		SM2::Stop();
+		U_StepMotor2.Stop();
 		break;
 	default:
 		break;
@@ -620,17 +622,18 @@ void Function::AutoControl_SM_By_Step_With_ADC_And_Encoder(uint8_t no,
 	AutoControl_SM_By_Step(no, step);
 	switch (no) {
 	case 1:
-		while (SM1::CurStep < SM1::TgtStep) { //速度 10k 加速度100k时会导致步进电机自己停止
-			if (!SM1::Busy) {
+		while (U_StepMotor1.GetCurStep() < U_StepMotor1.GetTgtStep()) { //速度 10k 加速度100k时会导致步进电机自己停止
+			if (!U_StepMotor1.IsBusy()) {
 				break;
 			}
-			if (SM1::CurStep >= (SM1::TgtStep / num * index)) {
+			if (U_StepMotor1.GetCurStep()
+					>= (U_StepMotor1.GetTgtStep() / num * index)) {
 				switch (encoderNo) {
 				case 2:
-					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
+					ASBSWAAE_Pos[index].twoword = U_Encoder1.Get();
 					break;
 				case 4:
-					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
+					ASBSWAAE_Pos[index].twoword = U_Encoder2.Get();
 					break;
 				default:
 					break;
@@ -642,17 +645,18 @@ void Function::AutoControl_SM_By_Step_With_ADC_And_Encoder(uint8_t no,
 		}
 		break;
 	case 2:
-		while (SM2::CurStep < SM2::TgtStep) {
-			if (SM2::CurStep >= (SM2::TgtStep / num * index)) {
-				if (!SM2::Busy) {
+		while (U_StepMotor2.GetCurStep() < U_StepMotor2.GetTgtStep()) {
+			if (U_StepMotor2.GetCurStep()
+					>= (U_StepMotor2.GetTgtStep() / num * index)) {
+				if (!U_StepMotor2.IsBusy()) {
 					break;
 				}
 				switch (encoderNo) {
 				case 2:
-					ASBSWAAE_Pos[index].twoword = OE2::GetPos();
+					ASBSWAAE_Pos[index].twoword = U_Encoder1.Get();
 					break;
 				case 4:
-					ASBSWAAE_Pos[index].twoword = OE4::GetPos();
+					ASBSWAAE_Pos[index].twoword = U_Encoder2.Get();
 					break;
 				default:
 					break;
@@ -672,13 +676,9 @@ void Function::AutoControl_SM_By_Step_With_ADC_And_Encoder(uint8_t no,
 
 void Function::AutoControl_SpecialADCWithTime(uint8_t ms, uint8_t adcNo,
 		uint16_t num) {
-	uint64_t last = micros();
-
 	AutoControl_SpecialADCWithTime_Busy = true;
 	for (uint16_t i = 0; i < num; ++i) {
-		while (micros() - last < ms * 1000)
-			;
-		last = micros();
+		U_SystemTick::WaitMilliSecond(ms);
 		ExADC::RefreshData();
 		ADCDATA[i].word = ExADC::Data[adcNo].word;
 	}
@@ -694,30 +694,25 @@ void Function::AutoControl_SpecialADCWithTrigger(uint8_t sensorNo,
 	AutoControl_SpecialADCWithTrigger_Busy = true;
 
 	Limit::Waitting(sensorNo); //等待到达凹槽
-	last = micros();
+	last = U_SystemTick::GetMicroSecond();
 	Limit::Waitting(sensorNo); //第二次到达凹槽
-	timeSpan = micros() - last; //计算凹槽之间时间
+	timeSpan = U_SystemTick::GetMicroSecond() - last; //计算凹槽之间时间
 	triggerTime = timeSpan / 255.0 * moment; //计算触发事件
 	for (uint8_t i = 0; i < num; ++i) {
 		LED::Turn(Color_Yellow);
-		last = micros();
-		while (true) {
-			if (micros() - last >= triggerTime) {
-				ExADC::RefreshData();
-				ADCDATA[i].word = ExADC::Data[adcNo].word;
-				break;
-			}
-		}
+		//等待到达采样位置所需时间
+		U_SystemTick::WaitMicroSecond(triggerTime);
+		//开始采样
+		ExADC::RefreshData();
+		ADCDATA[i].word = ExADC::Data[adcNo].word;
+		//等待下一个凹槽
 		LED::Turn(Color_Blue);
 		Limit::Waitting(sensorNo);
 	}
-	last = micros();
-	while (true) {
-		if (micros() - last >= triggerTime) {
-			PowerDev::Motor(0);
-			break;
-		}
-	}
+	//等待到达采样位置所需时间
+	U_SystemTick::WaitMicroSecond(triggerTime);
+	//在采样位置停止
+	PowerDev::Motor(0);
 
 	AutoControl_SpecialADCWithTrigger_Busy = false;
 }
@@ -731,31 +726,26 @@ void Function::AutoControl_SpecialDoubleADCWithTrigger(uint8_t sensorNo,
 	AutoControl_SpecialDoubleADCWithTrigger_Busy = true;
 
 	Limit::Waitting(sensorNo); //等待到达凹槽
-	last = micros();
+	last = U_SystemTick::GetMicroSecond();
 	Limit::Waitting(sensorNo); //第二次到达凹槽
-	timeSpan = micros() - last; //计算凹槽之间时间
+	timeSpan = U_SystemTick::GetMicroSecond() - last; //计算凹槽之间时间
 	triggerTime = timeSpan / 255.0 * moment; //计算触发事件
 	for (uint8_t i = 0; i < num; ++i) {
 		LED::Turn(Color_Yellow);
-		last = micros();
-		while (true) {
-			if (micros() - last >= triggerTime) {
-				ExADC::RefreshData();
-				ADCDATA[i].word = ExADC::Data[adcNo].word;
-				ADCDATA2[i].word = ExADC::Data[adcNo2].word;
-				break;
-			}
-		}
+		//等待到达采样位置所需时间
+		U_SystemTick::WaitMicroSecond(triggerTime);
+		//开始采样
+		ExADC::RefreshData();
+		ADCDATA[i].word = ExADC::Data[adcNo].word;
+		ADCDATA2[i].word = ExADC::Data[adcNo2].word;
+		//等待下一个凹槽
 		LED::Turn(Color_Blue);
 		Limit::Waitting(sensorNo);
 	}
-	last = micros();
-	while (true) {
-		if (micros() - last >= triggerTime) {
-			PowerDev::Motor(0);
-			break;
-		}
-	}
+	//等待到达采样位置所需时间
+	U_SystemTick::WaitMicroSecond(triggerTime);
+	//在采样位置停止
+	PowerDev::Motor(0);
 
 	AutoControl_SpecialDoubleADCWithTrigger_Busy = false;
 }
@@ -764,7 +754,7 @@ void Function::AutoControl_SpecialMotorPosition(uint8_t sensorNo, uint16_t ms) {
 	AutoControl_SpecialMotorPosition_Busy = true;
 
 	Limit::Waitting(sensorNo);
-	Delay_ms(ms);
+	U_SystemTick::WaitMilliSecond(ms);
 	PowerDev::Motor(0);
 
 	AutoControl_SpecialMotorPosition_Busy = false;
@@ -773,10 +763,10 @@ void Function::AutoControl_SpecialMotorPosition(uint8_t sensorNo, uint16_t ms) {
 void Function::Setting_SM_Speed(uint8_t no, uint16_t speed, uint32_t tgtAcc) {
 	switch (no) {
 	case 1:
-		SM1::SetSpeed(speed, tgtAcc);
+		U_StepMotor1.SetSpeed(speed, tgtAcc);
 		break;
 	case 2:
-		SM2::SetSpeed(speed, tgtAcc);
+		U_StepMotor2.SetSpeed(speed, tgtAcc);
 		break;
 	default:
 		break;
@@ -793,10 +783,10 @@ void Function::Setting_Valve_Default(uint32_t status) {
 void Function::Setting_Encoder_Zero(uint8_t no) {
 	switch (no) {
 	case 2:
-		OE2::SetPos(0);
+		U_Encoder1.Set(0);
 		break;
 	case 4:
-		OE4::SetPos(0);
+		U_Encoder2.Set(0);
 		break;
 	default:
 		break;
@@ -805,15 +795,24 @@ void Function::Setting_Encoder_Zero(uint8_t no) {
 
 void Function::Setting_Protect_Limit(uint8_t no, uint8_t status,
 		uint8_t limitNo) {
-	SM_DIR_Typedef dir = status != 0 ? SM_DIR_Upward : SM_DIR_Backward;
+	U_StepMotor::Dir_Typedef dir =
+			status == 0 ? U_StepMotor::Dir_CW : U_StepMotor::Dir_CCW;
+	if (limitNo == 0xff) {
+		limitNo = 0;
+	}
+	uint8_t limit = 1 << limitNo;
 	switch (no) {
 	case 1:
 		switch (dir) {
-		case SM_DIR_Upward:
-			SM1::UpwardLimit = 1 << limitNo;
+		case U_StepMotor::Dir_CW:
+			Setting::MainSetting.Unit.U_StepMotor1_CWLimit = limit;
+			U_StepMotor1.SetCWLimit(
+					Setting::MainSetting.Unit.U_StepMotor1_CWLimit);
 			break;
-		case SM_DIR_Backward:
-			SM1::BackwardLimit = 1 << limitNo;
+		case U_StepMotor::Dir_CCW:
+			Setting::MainSetting.Unit.U_StepMotor1_CCWLimit = limit;
+			U_StepMotor1.SetCCWLimit(
+					Setting::MainSetting.Unit.U_StepMotor1_CCWLimit);
 			break;
 		default:
 			break;
@@ -821,11 +820,15 @@ void Function::Setting_Protect_Limit(uint8_t no, uint8_t status,
 		break;
 	case 2:
 		switch (dir) {
-		case SM_DIR_Upward:
-			SM2::UpwardLimit = 1 << limitNo;
+		case U_StepMotor::Dir_CW:
+			Setting::MainSetting.Unit.U_StepMotor2_CWLimit = limit;
+			U_StepMotor2.SetCWLimit(
+					Setting::MainSetting.Unit.U_StepMotor2_CWLimit);
 			break;
-		case SM_DIR_Backward:
-			SM2::BackwardLimit = 1 << limitNo;
+		case U_StepMotor::Dir_CCW:
+			Setting::MainSetting.Unit.U_StepMotor2_CCWLimit = limit;
+			U_StepMotor2.SetCCWLimit(
+					Setting::MainSetting.Unit.U_StepMotor2_CCWLimit);
 			break;
 		default:
 			break;
@@ -834,6 +837,7 @@ void Function::Setting_Protect_Limit(uint8_t no, uint8_t status,
 	default:
 		break;
 	}
+	Setting::Save();
 }
 
 void Function::Setting_PIDParam(uint8_t no, DoubletoByte_Typedef p,
@@ -846,21 +850,21 @@ void Function::Setting_PIDParam(uint8_t no, DoubletoByte_Typedef p,
 		PID.Clear();
 		break;
 	case 1: {
-		uint8_t data[33];
-		uint8_t index = 0;
-		for (uint8_t j = 0; j < 8; ++j) {
-			data[index++] = p.byte[j];
-		}
-		for (uint8_t j = 0; j < 8; ++j) {
-			data[index++] = i.byte[j];
-		}
-		for (uint8_t j = 0; j < 8; ++j) {
-			data[index++] = d.byte[j];
-		}
-		for (uint8_t j = 0; j < 8; ++j) {
-			data[index++] = set.byte[j];
-		}
-		Protocol::Send(Salve_AC, PC_Setting_PIDParam, 33, data);
+//		uint8_t data[33];
+//		uint8_t index = 0;
+//		for (uint8_t j = 0; j < 8; ++j) {
+//			data[index++] = p.byte[j];
+//		}
+//		for (uint8_t j = 0; j < 8; ++j) {
+//			data[index++] = i.byte[j];
+//		}
+//		for (uint8_t j = 0; j < 8; ++j) {
+//			data[index++] = d.byte[j];
+//		}
+//		for (uint8_t j = 0; j < 8; ++j) {
+//			data[index++] = set.byte[j];
+//		}
+//		Protocol::Send(Salve_AC, PC_Setting_PIDParam, 33, data);
 	}
 		break;
 	default:
@@ -897,12 +901,32 @@ void Function::Setting_PIDEnable(uint8_t no, uint8_t state) {
 	}
 }
 
+void Function::Setting_SM_RelDir(uint8_t no, uint8_t status) {
+	U_StepMotor::Dir_Typedef dir =
+			status == 0 ? U_StepMotor::Dir_CW : U_StepMotor::Dir_CCW;
+	switch (no) {
+	case 1:
+		U_StepMotor1.SetRelativeDir(dir);
+		Setting::MainSetting.Unit.U_StepMotor1_RelativeDir = dir;
+		break;
+	case 2:
+		U_StepMotor2.SetRelativeDir(dir);
+		Setting::MainSetting.Unit.U_StepMotor2_RelativeDir = dir;
+		break;
+	default:
+		break;
+	}
+	Setting::Save();
+}
+
 #pragma GCC diagnostic ignored "-Wunused-parameter"
 void Function::Setting_USART(uint8_t com) {
 }
 
 void Function::Setting_Address(uint8_t add) {
-
+	Setting::MainSetting.Unit.SalveAddress = add;
+	Protocol::DevAdd = Setting::MainSetting.Unit.SalveAddress;
+	Setting::Save();
 }
 #pragma GCC diagnostic pop
 
@@ -918,4 +942,3 @@ void Function::Special_Continue() {
 
 void Function::Special_Cacel() {
 }
-

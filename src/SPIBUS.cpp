@@ -5,8 +5,8 @@
  *      Author: Romeli
  */
 
+#include <Tool/U_SystemTick.h>
 #include "SPIBUS.h"
-#include "Delay.h"
 
 #define READY_PIN GPIO_Pin_12
 #define READ_READY (GPIOB->IDR & READY_PIN)

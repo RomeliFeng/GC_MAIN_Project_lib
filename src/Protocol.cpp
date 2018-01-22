@@ -19,7 +19,7 @@ P_Buf_Typedef Protocol::P_Rcv;
 P_Buf_Typedef Protocol::P_Run;
 P_Buf_Typedef Protocol::P_Run2;
 
-void U_USART3_Event() {
+void Protocol::ReceiveEvent() {
 	P_Buf_Typedef databuf;
 	PA_Typedef result = Protocol::Analysis(&databuf);
 	if (result == PA_Ok) {
@@ -31,14 +31,10 @@ void U_USART3_Event() {
 		Protocol::P_Rcv.flag = true;
 		Protocol::Send(PC_Post_Get, databuf.data[LEN_OFF], Protocol::P_Rcv.pc,
 				Protocol::P_Rcv.data);
-	} else {
-		if (result == PA_CheckSumError) {
-			Protocol::Send(PC_Post_Error, result);
-		} else {
-			Protocol::Send(PC_Post_Error, 0xff);
-		}
+	} else if (result == PA_CheckSumError) {
+		Protocol::Send(PC_Post_Error, result);
 	}
-	U_USART3.clear();
+	U_USART3.Clear();
 }
 
 void Protocol::Init() {
@@ -50,11 +46,11 @@ void Protocol::Init() {
 _PA_Typedef Protocol::Analysis(P_Buf_Typedef* databuf) {
 	WordtoByte_Typedef datalen;
 
-	databuf->len = U_USART3.available();
+	databuf->len = U_USART3.Available();
 	if (databuf->len > 64) {
 		return PA_FrameError;
 	}
-	U_USART3.read(databuf->data, databuf->len);
+	U_USART3.Read(databuf->data, databuf->len);
 	datalen.byte[0] = databuf->data[LEN_OFF];
 	datalen.byte[1] = databuf->data[LEN2_OFF];
 	if (databuf->data[0] != '\r' || databuf->data[1] != '\n') {
@@ -104,34 +100,34 @@ void Protocol::Send(PC_Typedef com, uint16_t datalen, uint8_t com_get,
 	sendbuf.data[index++] = sum;	//sum
 	//起始字节2+地址字节1+指令字节1+数据长度字节2+数据长度+校验
 	sendbuf.len = (2 + 1 + 1 + 2 + datalen + 1);
-	U_USART3.print(sendbuf.data, sendbuf.len);
+	U_USART3.Write(sendbuf.data, sendbuf.len);
 }
 
-void Protocol::Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
-		uint8_t* data) {
-	DataBuf_Typedef sendbuf;
-	uint16_t index = 0;
-	uint8_t sum = 0;
+/*void Protocol::Send(Salve_Typedef salve, PC_Typedef com, uint16_t datalen,
+ uint8_t* data) {
+ DataBuf_Typedef sendbuf;
+ uint16_t index = 0;
+ uint8_t sum = 0;
 
-	sendbuf.data[index++] = com; //填充指令字节
-	sendbuf.data[index++] = (uint8_t) datalen;	//填充数据长度字节（指令字节+数据长度）
-	sendbuf.data[index++] = (uint8_t) (datalen >> 8);	//填充数据长度字节（指令字节+数据长度）
-	sum = com + (uint8_t) datalen + (uint8_t) (datalen >> 8);	//指令字节和数据长度字节
-	for (uint16_t i = 0; i < datalen; ++i) {	//循环累加数据位，并填充发送缓冲
-		sendbuf.data[index++] = *(data + i);
-		sum += sendbuf.data[index - 1];
-	}
-	sendbuf.data[index++] = sum;	//sum
-	//指令字节1+数据长度字节2+数据长度+校验
-	sendbuf.len = (1 + 2 + datalen + 1);
+ sendbuf.data[index++] = com; //填充指令字节
+ sendbuf.data[index++] = (uint8_t) datalen;	//填充数据长度字节（指令字节+数据长度）
+ sendbuf.data[index++] = (uint8_t) (datalen >> 8);	//填充数据长度字节（指令字节+数据长度）
+ sum = com + (uint8_t) datalen + (uint8_t) (datalen >> 8);	//指令字节和数据长度字节
+ for (uint16_t i = 0; i < datalen; ++i) {	//循环累加数据位，并填充发送缓冲
+ sendbuf.data[index++] = *(data + i);
+ sum += sendbuf.data[index - 1];
+ }
+ sendbuf.data[index++] = sum;	//sum
+ //指令字节1+数据长度字节2+数据长度+校验
+ sendbuf.len = (1 + 2 + datalen + 1);
 
-	SPIBUS::Select(salve, ENABLE);
-	U_SPI2::SendSync(sendbuf.data, sendbuf.len);
-	SPIBUS::Select(salve, DISABLE);
-}
+ SPIBUS::Select(salve, ENABLE);
+ U_SPI2::SendSync(sendbuf.data, sendbuf.len);
+ SPIBUS::Select(salve, DISABLE);
+ }
 
-void Protocol::Receive(Salve_Typedef salve, uint8_t* data, uint8_t len) {
-	SPIBUS::Select(salve, ENABLE);
-	U_SPI2::ReceiveSync(data, len);
-	SPIBUS::Select(salve, DISABLE);
-}
+ void Protocol::Receive(Salve_Typedef salve, uint8_t* data, uint8_t len) {
+ SPIBUS::Select(salve, ENABLE);
+ U_SPI2::ReceiveSync(data, len);
+ SPIBUS::Select(salve, DISABLE);
+ }*/

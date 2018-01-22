@@ -8,10 +8,12 @@
 #ifndef FUNCTION_H_
 #define FUNCTION_H_
 
+#include <Tool/U_PID.h>
+#include "U_Misc.h"
 #include "cmsis_device.h"
 #include "Protocol.h"
-#include "Typedef.h"
-#include "PID.h"
+#include "Setting.h"
+
 
 class Function {
 public:
@@ -21,7 +23,7 @@ public:
 	static WordtoByteSigned_Typedef ADCDATA2[128];
 
 	static PIDParam_Typedef PIDParam;
-	static PIDClass PID;
+	static U_PID PID;
 	static bool PIDEnable;
 	static bool AutoControl_SpecialADCWithTime_Busy;
 	static bool AutoControl_SpecialADCWithTrigger_Busy;
@@ -83,6 +85,7 @@ public:
 			DoubletoByte_Typedef set);
 	static void Setting_PIDInput(uint8_t no, DoubletoByte_Typedef now);
 	static void Setting_PIDEnable(uint8_t no, uint8_t state);
+	static void Setting_SM_RelDir(uint8_t no, uint8_t status);
 	static void Setting_USART(uint8_t com);
 	static void Setting_Address(uint8_t add);
 
@@ -93,4 +96,4 @@ public:
 private:
 };
 
-#endif /* FUNCTION_H_ */
+#endif

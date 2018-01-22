@@ -8,8 +8,8 @@
 #ifndef EXADC_H_
 #define EXADC_H_
 
+#include "U_Misc.h"
 #include "cmsis_device.h"
-#include "Typedef.h"
 
 class ExADC {
 public:
